@@ -1,0 +1,12 @@
+p3
+*.o
+*.s
+*.run
+*.d
+*.out
+*.raw
+*.time
+*.result
+*.diff
+*.err
+
