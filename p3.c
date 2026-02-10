@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 int main() {
-    // reads the fun program from stdin
+    // read the fun program in through mmap
     puts("    .data");
     puts("format: .byte '%', 'd', 10, 0");
     puts("    .text");
