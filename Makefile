@@ -24,7 +24,7 @@ ${O_FILES} : %.o : Makefile %.c
 	-gcc ${CFLAGS} -c -MMD -o $*.o $*.c
 
 ${TEST_S} : %.s : Makefile ${PROG} %.fun
-	./p3 < $*.fun > $*.s
+	./p3 $*.fun > $*.s
 
 ${TEST_RUNS} : %.run : Makefile %.s
 	gcc -o $*.run $*.s
