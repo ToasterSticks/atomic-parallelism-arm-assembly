@@ -15,12 +15,13 @@ C_O_FILES=${addprefix $B/,${subst .c,.o,${C_FILES}}}
 LINK=${firstword ${patsubst %.cxx,${CXX},${CXX_FILES} ${patsubst %.c,${CC},${C_FILES}}}}
 LINK_FLAGS=
 
-ARM_FILES=${sort ${wildcard *.arm}}
-TESTS=${subst .arm,.test,${ARM_FILES}}
-OK_FILES=${subst .arm,.ok,${ARM_FILES}}
-OUT_FILES=${subst .arm,.out,${ARM_FILES}}
-DIFF_FILES=${subst .arm,.diff,${ARM_FILES}}
-RESULT_FILES=${subst .arm,.result,${ARM_FILES}}
+S_FILES=${sort ${wildcard *.s}}
+ARM_FILES=${subst .s,.arm,${S_FILES}}
+TESTS=${subst .s,.test,${S_FILES}}
+OK_FILES=${subst .s,.ok,${S_FILES}}
+OUT_FILES=${subst .s,.out,${S_FILES}}
+DIFF_FILES=${subst .s,.diff,${S_FILES}}
+RESULT_FILES=${subst .s,.result,${S_FILES}}
 
 all : $B/arm
 
@@ -40,6 +41,9 @@ ${CXX_O_FILES} : $B/%.o: %.cxx Makefile
 ${C_O_FILES} : $B/%.o: %.c Makefile
 	@mkdir -p $B
 	${CC} -MMD -MF $B/$*.d -c -o $@ ${CC_FLAGS} $*.c
+
+${ARM_FILES}: %.arm : Makefile %.s
+	aarch64-linux-cc -c -O3 -nostdlib -march=armv8.1-a -o $*.arm  $*.s
 
 ${TESTS}: %.test : Makefile %.result
 	echo "$* ... $$(cat $*.result) [$$(cat $*.time)]"
@@ -61,4 +65,4 @@ ${OUT_FILES}: %.out : Makefile $B/arm %.arm
 
 clean:
 	rm -rf $B
-	rm -f *.diff *.result *.out *.time
+	rm -f *.diff *.result *.out *.time *.arm
