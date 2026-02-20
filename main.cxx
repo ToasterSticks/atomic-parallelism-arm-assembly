@@ -5,6 +5,9 @@
 #include "elf.h"
 #include "arm.h"
 
+extern void initialize();
+extern void destroy();
+
 constexpr static int N = 4;
 
 int main(int argc, char** argv) {
@@ -12,6 +15,8 @@ int main(int argc, char** argv) {
         printf("usage: %s <ARM executable file name>\n",argv[0]);
         exit(-1);
     }
+
+    initialize(); // For any initialization if needed.
 
     std::thread threads[N];
 
