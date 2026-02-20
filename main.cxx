@@ -3,7 +3,8 @@
 #include <stdlib.h>
 
 #include "elf.h"
-#include "arm.h"
+
+extern void emulate(uint64_t entry, int thread_id);
 
 constexpr static int N = 4;
 
