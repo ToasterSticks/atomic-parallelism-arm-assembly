@@ -5,7 +5,7 @@
 #include "elf.h"
 #include "arm.h"
 
-constexpr static int N = 4; // Your test should work for any N >= 1.
+constexpr static int N = 4;
 
 int main(int argc, char** argv) {
     if (argc != 2) {
