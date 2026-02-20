@@ -7,3 +7,7 @@ void emulate(uint64_t entry, int thread_id) {
     printf("entry = %llx. thread_id = %d.\n",(long long)entry, thread_id);
     MISSING();
 }
+
+void destroy() {
+    // For any cleanup if needed.
+}

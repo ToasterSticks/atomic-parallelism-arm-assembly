@@ -27,5 +27,7 @@ int main(int argc, char** argv) {
         threads[i].join();
     }
 
+    destroy(); // For any cleanup if needed.
+
     return 0;
 }
