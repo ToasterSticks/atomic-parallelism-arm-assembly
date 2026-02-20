@@ -46,4 +46,3 @@ main:
     .section .data
 magic:
     .quad 0xffffffffffffffff
-    

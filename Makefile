@@ -43,7 +43,7 @@ ${C_O_FILES} : $B/%.o: %.c Makefile
 	${CC} -MMD -MF $B/$*.d -c -o $@ ${CC_FLAGS} $*.c
 
 ${ARM_FILES}: %.arm : Makefile %.s
-	aarch64-linux-cc -c -O3 -nostdlib -march=armv8.1-a -o $*.arm  $*.s
+	aarch64-linux-cc -nostdlib -march=armv8.1-a $*.s -o $*.arm
 
 ${TESTS}: %.test : Makefile %.result
 	echo "$* ... $$(cat $*.result) [$$(cat $*.time)]"
