@@ -3,11 +3,13 @@
 
 #include <cstdint>
 
-// This is the memory interface
-// We assume that memory is zero-filled
-
-
-// Write the given byte value at the given address
-extern void mem_write8(uint64_t address, uint8_t data);
+uint8_t mem_read8(uint64_t address);
+uint32_t mem_read32(uint64_t address);
+uint64_t mem_read64(uint64_t address);
+void mem_write8(uint64_t address, uint8_t data);
+void mem_write32(uint64_t address, uint32_t data);
+void mem_write64(uint64_t address, uint64_t data);
+uint64_t mem_ldaddal(uint64_t address, uint64_t addend);
+uint64_t mem_casal(uint64_t address, uint64_t expected, uint64_t new_val);
 
 #endif
