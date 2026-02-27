@@ -7,6 +7,7 @@ using namespace std;
 
 static unordered_map<uint64_t, uint8_t> memory_bytes;
 static mutex memory_mutex;
+static mutex output_mutex;
 
 static uint8_t read8Unlocked(uint64_t address) {
     auto it = memory_bytes.find(address);
@@ -70,11 +71,12 @@ uint64_t mem_read64(uint64_t address) {
 }
 
 void mem_write8(uint64_t address, uint8_t data) {
-    scoped_lock lock(memory_mutex);
     if (address == UINT64_MAX) {
+        scoped_lock output_lock(output_mutex);
         putchar((int) data);
         return;
     }
+    scoped_lock lock(memory_mutex);
     write8Unlocked(address, data);
 }
 
@@ -118,6 +120,14 @@ uint32_t mem_casal32(uint64_t address, uint32_t expected, uint32_t new_val) {
         write32Unlocked(address, new_val);
     }
     return old;
+}
+
+void mem_lock_output() {
+    output_mutex.lock();
+}
+
+void mem_unlock_output() {
+    output_mutex.unlock();
 }
 
 void initialize() {}

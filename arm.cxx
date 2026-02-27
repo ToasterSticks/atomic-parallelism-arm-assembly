@@ -60,11 +60,13 @@ void advancePc(ThreadState& state) {
 
 void printUnknownInstruction(Word word, ThreadState const& state) {
     if (state.thread_id != 0) return;
+    mem_lock_output();
     printf("unknown instruction %08x at %llx\n", word, (PrintHex64) state.pc);
     for (int i = 0; i < 31; i++) {
         printf("X%02d : %016llX\n", i, (PrintHex64) state.x[i]);
     }
     printf("XSP : %016llX\n", (PrintHex64) state.sp);
+    mem_unlock_output();
 }
 
 bool executeInstructionWord(ThreadState& state, Word word, bool& pc_overridden) {
