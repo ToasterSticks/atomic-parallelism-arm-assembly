@@ -32,12 +32,28 @@ static uint64_t read64Unlocked(uint64_t address) {
     return value;
 }
 
+static uint32_t read32Unlocked(uint64_t address) {
+    uint32_t value = 0;
+    for (int i = 0; i < 4; i++) {
+        value |= (uint32_t) read8Unlocked(address + (uint64_t) i) << (8 * i);
+    }
+    return value;
+}
+
 static void write64Unlocked(uint64_t address, uint64_t value) {
     for (int i = 0; i < 8; i++) {
         uint8_t byte = (uint8_t) ((value >> (8 * i)) & 0xff);
         write8Unlocked(address + (uint64_t) i, byte);
     }
 }
+
+static void write32Unlocked(uint64_t address, uint32_t value) {
+    for (int i = 0; i < 4; i++) {
+        uint8_t byte = (uint8_t) ((value >> (8 * i)) & 0xff);
+        write8Unlocked(address + (uint64_t) i, byte);
+    }
+}
+
 uint8_t mem_read8(uint64_t address) {
     scoped_lock lock(memory_mutex);
     return read8Unlocked(address);
@@ -45,11 +61,7 @@ uint8_t mem_read8(uint64_t address) {
 
 uint32_t mem_read32(uint64_t address) {
     scoped_lock lock(memory_mutex);
-    uint32_t value = 0;
-    for (int i = 0; i < 4; i++) {
-        value |= (uint32_t) read8Unlocked(address + (uint64_t) i) << (8 * i);
-    }
-    return value;
+    return read32Unlocked(address);
 }
 
 uint64_t mem_read64(uint64_t address) {
@@ -68,10 +80,7 @@ void mem_write8(uint64_t address, uint8_t data) {
 
 void mem_write32(uint64_t address, uint32_t data) {
     scoped_lock lock(memory_mutex);
-    for (int i = 0; i < 4; i++) {
-        uint8_t byte = (uint8_t) ((data >> (8 * i)) & 0xff);
-        write8Unlocked(address + (uint64_t) i, byte);
-    }
+    write32Unlocked(address, data);
 }
 
 void mem_write64(uint64_t address, uint64_t data) {
@@ -91,6 +100,22 @@ uint64_t mem_casal(uint64_t address, uint64_t expected, uint64_t new_val) {
     uint64_t old = read64Unlocked(address);
     if (old == expected) {
         write64Unlocked(address, new_val);
+    }
+    return old;
+}
+
+uint32_t mem_ldaddal32(uint64_t address, uint32_t addend) {
+    scoped_lock lock(memory_mutex);
+    uint32_t old = read32Unlocked(address);
+    write32Unlocked(address, old + addend);
+    return old;
+}
+
+uint32_t mem_casal32(uint64_t address, uint32_t expected, uint32_t new_val) {
+    scoped_lock lock(memory_mutex);
+    uint32_t old = read32Unlocked(address);
+    if (old == expected) {
+        write32Unlocked(address, new_val);
     }
     return old;
 }

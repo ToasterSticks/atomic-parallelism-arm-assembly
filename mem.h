@@ -11,5 +11,7 @@ void mem_write32(uint64_t address, uint32_t data);
 void mem_write64(uint64_t address, uint64_t data);
 uint64_t mem_ldaddal(uint64_t address, uint64_t addend);
 uint64_t mem_casal(uint64_t address, uint64_t expected, uint64_t new_val);
+uint32_t mem_ldaddal32(uint64_t address, uint32_t addend);
+uint32_t mem_casal32(uint64_t address, uint32_t expected, uint32_t new_val);
 
 #endif
