@@ -35,6 +35,52 @@ static uint64_t addOffset(uint64_t base, int64_t offset) {
     return base + (uint64_t)(offset);
 }
 
+static uint64_t rotateRight(uint64_t value, uint8_t rot, uint8_t width) {
+    uint8_t r = (uint8_t)(rot % width);
+    uint64_t mask = (width == 64) ? ~0ULL : ((1ULL << width) - 1ULL);
+    uint64_t v = value & mask;
+    if (r == 0) {
+        return v;
+    }
+    return ((v >> r) | (v << (width - r))) & mask;
+}
+
+static bool decodeLogicalImmediate(Word word, bool is64, uint64_t& imm) {
+    Word n = extractBits(word, 22, 1);
+    Word immr = extractBits(word, 16, 6);
+    Word imms = extractBits(word, 10, 6);
+    Word val = (n << 6) | ((~imms) & 0x3F);
+    int len = -1;
+    for (int i = 6; i >= 0; i--) {
+        if ((val >> i) & 1) {
+            len = i;
+            break;
+        }
+    }
+    if (len < 1) {
+        return false;
+    }
+    if (!is64 && n == 1) {
+        return false;
+    }
+    Word levels = (1u << len) - 1;
+    Word s = imms & levels;
+    Word r = immr & levels;
+    if (s == levels) {
+        return false;
+    }
+    uint8_t esize = (uint8_t)(1u << len);
+    uint64_t elem_ones = (s == 63u) ? ~0ULL : ((1ULL << (s + 1)) - 1ULL);
+    uint64_t elem = rotateRight(elem_ones, (uint8_t)(r), esize);
+    uint8_t datasize = is64 ? 64 : 32;
+    uint64_t out = 0;
+    for (uint8_t pos = 0; pos < datasize; pos = (uint8_t)(pos + esize)) {
+        out |= (elem << pos);
+    }
+    imm = is64 ? out : (uint32_t)(out);
+    return true;
+}
+
 static bool conditionHolds(ThreadState const& state, Word cond) {
     bool n = state.n == 1;
     bool z = state.z == 1;
@@ -127,7 +173,18 @@ void executeBCond(ThreadState& state, Word word, bool& pc_overridden) {
 }
 
 void executeCsel(ThreadState& state, Word word) {
-    
+    Word sf = extractBits(word, 31, 1);
+    Word rm = extractBits(word, 16, 5);
+    Word cond = extractBits(word, 12, 4);
+    Word rn = extractBits(word, 5, 5);
+    Word rd = extractBits(word, 0, 5);
+    bool is64 = sf == 1;
+    uint64_t selected = conditionHolds(state, cond)
+        ? ((rn == 31) ? 0 : state.x[rn])
+        : ((rm == 31) ? 0 : state.x[rm]);
+    if (rd != 31) {
+        state.x[rd] = is64 ? selected : (uint32_t)(selected);
+    }
 }
 
 void executeAdrp(ThreadState& state, Word word) {
@@ -229,11 +286,68 @@ void executeMovz(ThreadState& state, Word word) {
 }
 
 void executeOrrImm(ThreadState& state, Word word) {
-    
+    Word sf = extractBits(word, 31, 1);
+    Word rn = extractBits(word, 5, 5);
+    Word rd = extractBits(word, 0, 5);
+    bool is64 = sf == 1;
+    uint64_t imm_mask = 0;
+    if (!decodeLogicalImmediate(word, is64, imm_mask)) {
+        return;
+    }
+
+    uint64_t src = (rn == 31) ? 0 : state.x[rn];
+    uint64_t result = src | imm_mask;
+    if (rd != 31) {
+        state.x[rd] = is64 ? result : (uint32_t)(result);
+    }
 }
 
 void executeStrImm(ThreadState& state, Word word) {
-    
+    Word size = extractBits(word, 30, 2);
+    Word rn = extractBits(word, 5, 5);
+    Word rt = extractBits(word, 0, 5);
+    bool is64 = size == 3;
+    bool is32 = size == 2;
+    if (!is64 && !is32) {
+        return;
+    }
+
+    bool unsigned_offset = extractBits(word, 24, 1) == 1;
+    bool wback = !unsigned_offset;
+    bool postindex = false;
+    int64_t offset = 0;
+
+    if (unsigned_offset) {
+        Word imm12 = extractBits(word, 10, 12);
+        offset = (int64_t)(imm12 << (is64 ? 3 : 2));
+    } else {
+        Word imm9 = extractBits(word, 12, 9);
+        offset = signExtendTo64(imm9, 9);
+        postindex = extractBits(word, 11, 1) == 0;
+    }
+
+    uint64_t address = (rn == 31) ? state.sp : state.x[rn];
+    if (!postindex) {
+        address = addOffset(address, offset);
+    }
+
+    uint64_t data = (rt == 31) ? 0 : state.x[rt];
+    if (is64) {
+        mem_write64(address, data);
+    } else {
+        mem_write32(address, (uint32_t)(data));
+    }
+
+    if (wback) {
+        if (postindex) {
+            address = addOffset(address, offset);
+        }
+        if (rn == 31) {
+            state.sp = address;
+        } else {
+            state.x[rn] = address;
+        }
+    }
 }
 
 void executeStrbImm(ThreadState& state, Word word) {
