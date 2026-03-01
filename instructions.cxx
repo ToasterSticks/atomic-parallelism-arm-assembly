@@ -117,6 +117,8 @@ static bool conditionHolds(ThreadState const& state, Word cond) {
             return z || (n != v);
         case 0xE:
             return true;
+        case 0xF:
+            return true;
         default:
             return false;
     }
