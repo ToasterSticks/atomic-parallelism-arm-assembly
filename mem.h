@@ -13,7 +13,5 @@ uint64_t mem_ldaddal(uint64_t address, uint64_t addend);
 uint64_t mem_casal(uint64_t address, uint64_t expected, uint64_t new_val);
 uint32_t mem_ldaddal32(uint64_t address, uint32_t addend);
 uint32_t mem_casal32(uint64_t address, uint32_t expected, uint32_t new_val);
-void mem_lock_output();
-void mem_unlock_output();
 
 #endif
