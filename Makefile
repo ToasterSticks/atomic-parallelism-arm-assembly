@@ -1,4 +1,3 @@
-
 B=build
 CXX=g++
 CXX_FLAGS=-Wall -Werror -O3 -g -std=c++23 -Iinclude
@@ -22,6 +21,8 @@ OK_FILES=${subst .s,.ok,${S_FILES}}
 OUT_FILES=${subst .s,.out,${S_FILES}}
 DIFF_FILES=${subst .s,.diff,${S_FILES}}
 RESULT_FILES=${subst .s,.result,${S_FILES}}
+TEST_LOOPS = ${subst .s,.loop,${S_FILES}}
+TEST_FAILS = ${subst .s,.fail,${S_FILES}}
 
 all : $B/arm
 
@@ -61,8 +62,60 @@ ${OUT_FILES}: %.out : Makefile $B/arm %.arm
 	@echo "failed to run" > $@
 	-time --quiet -f '%e' -o $*.time timeout 10 $B/arm $*.arm > $@
 
--include ${shell find $B -name '*.d' 2>/dev/null || true}
+OTHER_USERS = ${shell who | sed -e 's/ .*//' | sort | uniq}
+HOW_MANY = ${shell who | sed -e 's/ .*//' | sort | uniq | wc -l}
+LOOP_LIMIT ?= 10
+
+loop_warning.%:
+	@echo "*******************************************************************************"
+	@echo "*** This is NOT the sort of thing you run ALL THE TIME on a SHARED MACHINE  ***"
+	@echo "*** In particular long running tests and tests that timeout                 ***"
+	@echo "*******************************************************************************"
+	@echo ""
+	@echo "You can use LOOP_LIMIT to control the number if iterations. For example:"
+	@echo "   LOOP_LIMIT=7 make -s $*.loop"
+	@echo ""
+	@echo "::::::: You are 1 of ${HOW_MANY} users on this machine"
+	@echo ":::::::         ${OTHER_USERS}"
+	@echo ":::::::   all of them value their work and their time as much as you value yours"
+	@echo ":::::::"
+	@echo ""
+
+${TEST_LOOPS} : %.loop : loop_warning.% %.result
+	@pass=0; \
+	i=1; \
+	while [ $$i -le ${LOOP_LIMIT} ]; do \
+		echo -n  "[$$i/${LOOP_LIMIT}] "; \
+		rm $*.out $*.result; \
+		$(MAKE) -s $*.test; \
+		if [ "`cat $*.result`" = "pass" ]; then pass=$$((pass + 1)); fi; \
+		i=$$((i + 1)); \
+	done; \
+	echo ""; \
+	echo "$$(basename $$(pwd)) $* $$pass/${LOOP_LIMIT}"; \
+	echo ""
+
+${TEST_FAILS} : %.fail : loop_warning.% %.result
+	@pass=0; \
+	i=1; \
+	while [ $$i -le ${LOOP_LIMIT} ]; do \
+		echo -n  "[$$i/${LOOP_LIMIT}] "; \
+		rm $*.out $*.result; \
+		$(MAKE) -s $*.test; \
+		if [ "`cat $*.time`" = "timeout" ]; then echo "timeout"; break; fi; \
+		if [ "`cat $*.result`" = "pass" ]; then pass=$$((pass + 1)); else break; fi; \
+		i=$$((i + 1)); \
+	done; \
+	echo ""; \
+	echo "$$(basename $$(pwd)) $* $$pass/${LOOP_LIMIT}"; \
+	echo ""	
+
+test.loop: loop_warning.test ${TEST_LOOPS}
+
+test.fail: loop_warning.test ${TEST_FAILS}
 
 clean:
 	rm -rf $B
 	rm -f *.diff *.result *.out *.time *.arm
+
+-include ${shell find $B -name '*.d' 2>/dev/null || true}
