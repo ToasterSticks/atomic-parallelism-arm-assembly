@@ -32,6 +32,10 @@ static uint8_t read8_unlocked(uint64_t address) {
 }
 
 static void write8_unlocked(uint64_t address, uint8_t data) {
+    if (address == UINT64_MAX) {
+        putchar((int) data);
+        return;
+    }
     if (in_bounds(address, 1) && lower_memory_bytes) {
         __atomic_store_n(lower_memory_bytes + address, data, mem_order);
         return;
@@ -44,7 +48,7 @@ static void write8_unlocked(uint64_t address, uint8_t data) {
 }
 
 static uint32_t read32_unlocked(uint64_t address) {
-    if (in_bounds(address, 4) && lower_memory_bytes) {
+    if ((address & 0x3ULL) == 0 && in_bounds(address, 4) && lower_memory_bytes) {
         return __atomic_load_n((uint32_t*) (lower_memory_bytes + address), mem_order);
     }
     uint32_t value = 0;
@@ -55,7 +59,7 @@ static uint32_t read32_unlocked(uint64_t address) {
 }
 
 static uint64_t read64_unlocked(uint64_t address) {
-    if (in_bounds(address, 8) && lower_memory_bytes) {
+    if ((address & 0x7ULL) == 0 && in_bounds(address, 8) && lower_memory_bytes) {
         return __atomic_load_n((uint64_t*) (lower_memory_bytes + address), mem_order);
     }
     uint64_t value = 0;
@@ -66,7 +70,7 @@ static uint64_t read64_unlocked(uint64_t address) {
 }
 
 static void write32_unlocked(uint64_t address, uint32_t value) {
-    if (in_bounds(address, 4) && lower_memory_bytes) {
+    if ((address & 0x3ULL) == 0 && in_bounds(address, 4) && lower_memory_bytes) {
         __atomic_store_n((uint32_t*) (lower_memory_bytes + address), value, mem_order);
         return;
     }
@@ -77,7 +81,7 @@ static void write32_unlocked(uint64_t address, uint32_t value) {
 }
 
 static void write64_unlocked(uint64_t address, uint64_t value) {
-    if (in_bounds(address, 8) && lower_memory_bytes) {
+    if ((address & 0x7ULL) == 0 && in_bounds(address, 8) && lower_memory_bytes) {
         __atomic_store_n((uint64_t*) (lower_memory_bytes + address), value, mem_order);
         return;
     }
@@ -112,10 +116,6 @@ uint64_t mem_read64(uint64_t address) {
 }
 
 void mem_write8(uint64_t address, uint8_t data) {
-    if (address == UINT64_MAX) {
-        putchar((int) data);
-        return;
-    }
     if (in_bounds(address, 1) && lower_memory_bytes) {
         write8_unlocked(address, data);
         return;
@@ -143,7 +143,7 @@ void mem_write64(uint64_t address, uint64_t data) {
 }
 
 uint64_t mem_ldaddal(uint64_t address, uint64_t addend) {
-    if (in_bounds(address, 8) && lower_memory_bytes) {
+    if ((address & 0x7ULL) == 0 && in_bounds(address, 8) && lower_memory_bytes) {
         return __atomic_fetch_add((uint64_t*) (lower_memory_bytes + address), addend, mem_order);
     }
     scoped_lock lock(memory_mutex);
@@ -153,7 +153,7 @@ uint64_t mem_ldaddal(uint64_t address, uint64_t addend) {
 }
 
 uint64_t mem_casal(uint64_t address, uint64_t expected, uint64_t new_val) {
-    if (in_bounds(address, 8) && lower_memory_bytes) {
+    if ((address & 0x7ULL) == 0 && in_bounds(address, 8) && lower_memory_bytes) {
         uint64_t observed = expected;
         __atomic_compare_exchange_n((uint64_t*) (lower_memory_bytes + address), &observed, new_val, false, mem_order, mem_order);
         return observed;
@@ -167,7 +167,7 @@ uint64_t mem_casal(uint64_t address, uint64_t expected, uint64_t new_val) {
 }
 
 uint32_t mem_ldaddal32(uint64_t address, uint32_t addend) {
-    if (in_bounds(address, 4) && lower_memory_bytes) {
+    if ((address & 0x3ULL) == 0 && in_bounds(address, 4) && lower_memory_bytes) {
         return __atomic_fetch_add((uint32_t*) (lower_memory_bytes + address), addend, mem_order);
     }
     scoped_lock lock(memory_mutex);
@@ -177,7 +177,7 @@ uint32_t mem_ldaddal32(uint64_t address, uint32_t addend) {
 }
 
 uint32_t mem_casal32(uint64_t address, uint32_t expected, uint32_t new_val) {
-    if (in_bounds(address, 4) && lower_memory_bytes) {
+    if ((address & 0x3ULL) == 0 && in_bounds(address, 4) && lower_memory_bytes) {
         uint32_t observed = expected;
         __atomic_compare_exchange_n((uint32_t*) (lower_memory_bytes + address), &observed, new_val, false, mem_order, mem_order);
         return observed;
